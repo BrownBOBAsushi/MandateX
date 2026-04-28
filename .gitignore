@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+backend/.env
+
+# Node
+node_modules/
+frontend/.next/
+frontend/.env.local
+
+# Solana keypair — never commit
+wallet.json
+pay-using-coinbase/client.json
+
+# Editor
+.vscode/
+.idea/
+*.swp
