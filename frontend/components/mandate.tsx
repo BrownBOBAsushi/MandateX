@@ -14,15 +14,17 @@ type Props = {
     perCallLimit: number
     dailyLimit: number
   }) => void
+  onRevoke: () => void
 }
 
-export default function MandateCard({ mandate, loadingStatus, onCreateMandate }: Props) {
+export default function MandateCard({ mandate, loadingStatus, onCreateMandate, onRevoke }: Props) {
   const [agentPubkey, setAgentPubkey] = useState(mandate.agentPubkey ?? 'ResearchAgent_01')
   const [vendor, setVendor] = useState(mandate.allowedVendors[0] ?? 'OpenWeather')
   const [perCallLimit, setPerCallLimit] = useState(mandate.perCallLimit ?? 2.0)
   const [dailyLimit, setDailyLimit] = useState(mandate.dailyLimit ?? 5.0)
 
   const isActive = mandate.status === 'active'
+  const isRevoked = mandate.status === 'revoked'
   const isLoading = loadingStatus === 'loading'
 
   function handleSubmit(e: React.FormEvent) {
@@ -126,15 +128,25 @@ export default function MandateCard({ mandate, loadingStatus, onCreateMandate }:
       </form>
 
       {/* Success state — onchain address as small proof, not the hero */}
-      {isActive && mandate.onchainAddress && (
-        <div className="border border-[#14F195]/20 bg-[#14F195]/5 rounded-lg p-3 space-y-1.5">
-          <p className="text-xs font-semibold text-[#14F195] uppercase tracking-wider">
-            ✓ Written to Solana
+      {(isActive || isRevoked) && mandate.onchainAddress && (
+        <div className={`border rounded-lg p-3 space-y-1.5 ${isRevoked ? 'border-[#FF4444]/20 bg-[#FF4444]/5' : 'border-[#14F195]/20 bg-[#14F195]/5'}`}>
+          <p className={`text-xs font-semibold uppercase tracking-wider ${isRevoked ? 'text-[#FF4444]' : 'text-[#14F195]'}`}>
+            {isRevoked ? '✕ Mandate Revoked' : '✓ Written to Solana'}
           </p>
           <p className="text-[10px] text-white/25 font-[family-name:var(--font-dm-mono)] break-all leading-relaxed">
             {mandate.onchainAddress}
           </p>
         </div>
+      )}
+
+      {/* Revoke button — visible when active */}
+      {isActive && (
+        <button
+          onClick={onRevoke}
+          className="w-full border border-[#FF4444]/30 hover:bg-[#FF4444]/8 text-[#FF4444]/70 hover:text-[#FF4444] text-xs py-2 rounded-md transition-colors"
+        >
+          Revoke Mandate
+        </button>
       )}
 
       {loadingStatus === 'error' && (

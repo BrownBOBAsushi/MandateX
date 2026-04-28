@@ -1,0 +1,17 @@
+{
+  "name": "mandatex-vendor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node api/index.js",
+    "start": "node api/index.js"
+  },
+  "dependencies": {
+    "@x402/core": "^2.11.0",
+    "@x402/express": "^2.11.0",
+    "@x402/svm": "^2.11.0",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {}
+}

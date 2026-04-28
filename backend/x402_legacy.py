@@ -1,4 +1,9 @@
-"""x402 payment execution via Coinbase facilitator on Solana devnet."""
+"""Legacy x402 client kept only as reference.
+
+Do not import this file from runtime code. The active backend payment client is
+`x402_client.py`; this file was renamed from `x402.py` so it no longer shadows
+the installed `x402` SDK package.
+"""
 
 import json
 import os

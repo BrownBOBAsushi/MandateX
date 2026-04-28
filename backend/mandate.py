@@ -1,4 +1,7 @@
 def check(agent_id: str, vendor_id: str, amount: float, mandate: dict) -> dict:
+    if mandate.get("status") == "revoked":
+        return {"approved": False, "reason": "mandate revoked"}
+
     if agent_id != mandate["agent_pubkey"]:
         return {"approved": False, "reason": "agent not authorized by mandate"}
 

@@ -52,7 +52,7 @@ mandatex/
 │   ├── api.py                 # FastAPI endpoints + orchestration
 │   ├── mandate.py             # 4-check authorization logic
 │   ├── solana_client.py       # Solana RPC read/write
-│   ├── x402.py                # x402 payment execution
+│   ├── x402_client.py         # x402 payment execution
 │   ├── mock_data.py           # All hardcoded fallback data
 │   ├── requirements.txt
 │   ├── .env                   # API keys, never commit
@@ -149,7 +149,7 @@ Do not skip ahead. Do not start a new task until the previous one works.
       Reference: https://github.com/Woody4618/x402-solana-examples
       Use the pay-using-coinbase example, NOT pay-in-usdc or pay-in-sol.
       Why: Coinbase facilitator handles on-chain verification for you.
-      Your x402.py only needs one HTTP call to the facilitator. No node needed.
+      Your x402_client.py only needs one HTTP call to the facilitator. No node needed.
 
       Steps to prove the rail works:
         git clone https://github.com/Woody4618/x402-solana-examples
@@ -159,9 +159,9 @@ Do not skip ahead. Do not start a new task until the previous one works.
         # Terminal 2: npm run coinbase:client
 
       After it runs: read pay-using-coinbase/client.ts and server.ts carefully.
-      This TypeScript code is your x402.py reference implementation.
+      This TypeScript code is your x402_client.py reference implementation.
 
-      How x402.py works after this:
+      How x402_client.py works after this:
         1. Receive approved payment request from mandate.py
         2. POST payment payload to Coinbase facilitator endpoint
         3. Facilitator verifies on Solana, returns tx confirmation
@@ -204,8 +204,8 @@ Do not skip ahead. Do not start a new task until the previous one works.
       /api/mandate/create -> solana_client.py.write_mandate()
       /api/payment/attempt -> solana_client.py.read_mandate()
                            -> mandate.py.check()
-                           -> x402.py.pay() only if approved
-      If mandate.py blocks the payment, x402.py must not be called.
+                           -> x402_client.py.pay() only if approved
+      If mandate.py blocks the payment, x402_client.py must not be called.
       Return { success, data, source, reason } on all paths.
       DONE WHEN: Full backend flow works via curl with real Solana data.
 

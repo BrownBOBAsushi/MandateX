@@ -201,7 +201,7 @@ These checks ALWAYS run regardless of fallback mode. Never mock the enforcement 
 - Primary unauthorized vendor attempt CTA
 - Blocked hero result with one-line reason
 - Proof panel showing mandate source + x402 not executed
-- Secondary authorized payment test for x402 rail proof
+- Secondary authorized payment test that ACTUALLY executes x402 (not just shows green)
 - Demo reset button
 - 🟢/🟡/🔴 data source badge
 - Mock fallback for all external calls
@@ -312,7 +312,7 @@ frontend/audit.tsx
 
 backend/api.py
   OWNS:     HTTP endpoints and request orchestration
-  DOES:     Receives requests, coordinates solana_client.py + mandate.py + x402.py,
+  DOES:     Receives requests, coordinates solana_client.py + mandate.py + x402_client.py,
             returns unified response with source field
   DOES NOT: Contain authorization rules, render UI
 
@@ -328,11 +328,13 @@ backend/solana_client.py
             returns mock data if RPC unreachable
   DOES NOT: Enforce rules, execute payments
 
-backend/x402.py
-  OWNS:     x402 payment execution
-  DOES:     Triggers payment after mandate approval,
-            returns mock confirmation if x402 unreachable
-  DOES NOT: Check mandate rules, touch Solana
+backend/x402_client.py
+  OWNS:     x402 payment execution via Coinbase facilitator
+  DOES:     Triggers payment after mandate approval using x402_requests client,
+            resolves vendor_id to vendor URL via VENDOR_URLS map,
+            returns { tx_hash, x402_status } - 'executed' on success,
+            'mocked' on facilitator failure (still treated as approved for demo)
+  DOES NOT: Check mandate rules, touch Solana, decide approved/blocked
 ```
 
 ---
@@ -386,10 +388,73 @@ Blocked payment responses must include:
 }
 ```
 
+Approved payment responses must include:
+
+```json
+{
+  "success": true,
+  "data": {
+    "approved": true,
+    "x402_status": "executed",
+    "tx_hash": "5xKp...xyz",
+    "vendor_url": "http://localhost:3000/weather"
+  },
+  "source": "live | partial | mock",
+  "reason": ""
+}
+```
+
+If x402 facilitator fails on the approved path, the response is still approved
+but x402_status flips to "mocked", source flips to "partial", and tx_hash is
+"DEMO_MOCK_TX_..." prefix. The UI must show this clearly so judges know which
+parts are real.
+
 Rules:
 - All API calls go through FastAPI backend only.
 - Frontend never calls Solana or x402 directly.
 - All API keys live in backend `.env` only, never in frontend.
+
+---
+
+## x402_client.pay() Contract
+
+The function `x402_client.pay()` already exists from Task 1 and made two confirmed
+devnet transactions. The remaining work is wiring it into the approved path of
+`/api/payment/attempt` in `api.py`.
+
+```python
+# backend/x402_client.py
+
+VENDOR_URLS = {
+    "OpenWeather": "http://localhost:3000/weather",   # TS demo server endpoint
+    "PremiumData": "http://localhost:3000/premium",   # second mock vendor endpoint
+}
+
+def pay(vendor_id: str, amount: float) -> dict:
+    """
+    Executes an x402 payment to the vendor's HTTP endpoint via Coinbase facilitator.
+    Returns:
+      Success → { "x402_status": "executed", "tx_hash": "<sig>", "vendor_url": "<url>" }
+      Failure → { "x402_status": "mocked",   "tx_hash": "DEMO_MOCK_TX_...", "vendor_url": "<url>" }
+    Never raises. Always returns a dict the api.py layer can hand back to frontend.
+    """
+```
+
+**Wiring rule in `api.py /api/payment/attempt`:**
+
+```python
+# 1. Read mandate from Solana
+# 2. Run mandate_checks.check() → { approved, reason }
+# 3. If NOT approved → return blocked response with x402_status="not_executed"
+# 4. If approved → call x402_client.pay(vendor_id, amount)
+# 5. If x402_status == "executed" → solana_client.update_spent(amount), source="live"
+# 6. If x402_status == "mocked"   → still update_spent, source="partial"
+# 7. Return approved response shape with tx_hash and x402_status
+```
+
+The approved path MUST call `x402_client.pay()`. Returning approved without
+calling x402 is a critical bug — the proof panel will say "Not executed" on
+the approved card, which breaks the demo story.
 
 ---
 
@@ -450,6 +515,17 @@ Do not rely on color alone.
 
 ---
 
+## Module Naming - Closed
+
+```
+- backend/solana.py  → renamed to backend/solana_client.py
+  (avoids conflict with `solana` PyPI package)
+- backend/x402.py    → renamed to backend/x402_client.py
+  (avoids conflict with `x402` PyPI package)
+```
+
+---
+
 ## Key Decisions - Closed
 
 ```
@@ -489,5 +565,7 @@ Do not rely on color alone.
 [ ] Full demo runs in under 3 minutes
 [ ] Reset button restores demo state in one click
 [ ] No console errors during demo run
-[ ] Primary unauthorized attempt and secondary authorized test both work cleanly
+[ ] Primary unauthorized attempt blocks before x402 fires (proof panel: Not executed)
+[ ] Secondary authorized test fires real x402 payment (proof panel: tx_hash visible)
+[ ] Both proof panels reflect actual x402 execution state, not hardcoded labels
 ```

@@ -17,6 +17,8 @@ export type PaymentAttempt = {
   reason: string
   timestamp: string
   x402Status: X402Status
+  txHash: string | null
+  vendorUrl: string | null
 }
 
 export type Mandate = {
@@ -112,6 +114,8 @@ export default function Home() {
         reason: json.reason,
         timestamp: new Date().toISOString(),
         x402Status: json.data.x402_status,
+        txHash: json.data.tx_hash ?? null,
+        vendorUrl: json.data.vendor_url ?? null,
       }
       setPayments(prev => [attempt, ...prev])
       setDataSource(json.source)
@@ -123,6 +127,18 @@ export default function Home() {
     } finally {
       setPaymentLoading(false)
     }
+  }
+
+  async function handleRevoke() {
+    if (!mandate.mandateId) return
+    try {
+      await fetch(`${API}/api/mandate/revoke`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mandate_id: mandate.mandateId }),
+      })
+    } catch { /* swallow */ }
+    setMandate(prev => ({ ...prev, status: 'revoked' }))
   }
 
   async function handleReset() {
@@ -172,6 +188,7 @@ export default function Home() {
               mandate={mandate}
               loadingStatus={loadingStatus}
               onCreateMandate={handleCreateMandate}
+              onRevoke={handleRevoke}
             />
           </div>
         </section>
@@ -188,6 +205,7 @@ export default function Home() {
               paymentLoading={paymentLoading}
               onUnauthorizedAttempt={() => handlePaymentAttempt('PremiumData', 1.0)}
               onAuthorizedAttempt={() => handlePaymentAttempt('OpenWeather', 1.0)}
+              onOverspendAttempt={() => handlePaymentAttempt('OpenWeather', 6.0)}
             />
           </div>
         </section>
@@ -222,7 +240,7 @@ export default function Home() {
                   </div>
                   <p className="text-xs text-white/35">x402 payment: Not executed</p>
                 </div>
-                <AuditPanel dataSource={dataSource} latestPayment={latestPayment} mandate={mandate} />
+                <AuditPanel dataSource={dataSource} latestPayment={latestPayment} mandate={mandate} payments={payments} />
               </>
             ) : (
               <>
@@ -230,15 +248,17 @@ export default function Home() {
                   <p className="text-2xl font-bold text-[#14F195] font-[family-name:var(--font-syne)]">
                     APPROVED
                   </p>
-                  <p className="text-sm text-white/70">
-                    Approved — {latestPayment.amount} USDC to {latestPayment.vendor}
-                  </p>
-                  <p className="text-xs text-white/35">
-                    x402 payment:{' '}
-                    {latestPayment.x402Status === 'executed' ? 'Executed' : 'Mocked'}
-                  </p>
+                  {latestPayment.x402Status === 'executed' ? (
+                    <p className="text-sm text-white/70">
+                      {latestPayment.amount} USDC sent to {latestPayment.vendor}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-white/50 italic">
+                      Would have sent {latestPayment.amount} USDC — facilitator down
+                    </p>
+                  )}
                 </div>
-                <AuditPanel dataSource={dataSource} latestPayment={latestPayment} mandate={mandate} />
+                <AuditPanel dataSource={dataSource} latestPayment={latestPayment} mandate={mandate} payments={payments} />
               </>
             )}
           </div>

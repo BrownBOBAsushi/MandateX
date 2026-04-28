@@ -204,7 +204,7 @@ frontend/audit.tsx
 backend/api.py
   OWNS:     HTTP endpoints and request orchestration
   DOES:     Creates mandates, receives payment attempts,
-            coordinates solana_client.py + mandate.py + x402.py calls,
+            coordinates solana_client.py + mandate.py + x402_client.py calls,
             returns unified response with source field
   DOES NOT: Contain authorization rules, render UI
 
@@ -221,7 +221,7 @@ backend/solana_client.py
             returns mock data if RPC unreachable
   DOES NOT: Enforce rules, execute payments
 
-backend/x402.py
+backend/x402_client.py
   OWNS:     x402 payment execution
   DOES:     Triggers payment after mandate approval,
             returns mock confirmation if x402 unreachable

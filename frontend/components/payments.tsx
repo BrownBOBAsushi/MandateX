@@ -1,12 +1,13 @@
 'use client'
 
-import type { Mandate, PaymentAttempt } from '@/app/page'
+import type { Mandate } from '@/app/page'
 
 type Props = {
   mandate: Mandate
   paymentLoading: boolean
   onUnauthorizedAttempt: () => void
   onAuthorizedAttempt: () => void
+  onOverspendAttempt: () => void
 }
 
 export default function PaymentsPanel({
@@ -14,6 +15,7 @@ export default function PaymentsPanel({
   paymentLoading,
   onUnauthorizedAttempt,
   onAuthorizedAttempt,
+  onOverspendAttempt,
 }: Props) {
   const agent = mandate.agentPubkey ?? 'ResearchAgent_01'
   const allowedVendor = mandate.allowedVendors[0] ?? 'OpenWeather'
@@ -66,8 +68,19 @@ export default function PaymentsPanel({
         </button>
       </div>
 
+      {/* Stretch 2 — overspend trigger (check 3: exceeds per-call limit) */}
+      <button
+        onClick={onOverspendAttempt}
+        disabled={paymentLoading || mandate.status !== 'active'}
+        className="w-full border border-[#F5A623]/25 hover:bg-[#F5A623]/8 disabled:opacity-35 disabled:cursor-not-allowed text-[#F5A623]/60 hover:text-[#F5A623] text-xs py-2 rounded-md transition-colors"
+      >
+        Simulate Overspend — 6 USDC
+      </button>
+
       {mandate.status !== 'active' && (
-        <p className="text-xs text-white/25 text-center">Create a mandate first</p>
+        <p className="text-xs text-white/25 text-center">
+          {mandate.status === 'revoked' ? 'Mandate revoked' : 'Create a mandate first'}
+        </p>
       )}
     </div>
   )

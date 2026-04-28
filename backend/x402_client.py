@@ -10,9 +10,9 @@ load_dotenv()
 _PRIVATE_KEY = os.getenv("SOLANA_PRIVATE_KEY", "")
 _VENDOR_URL = os.getenv("X402_VENDOR_URL", "http://localhost:3000")
 
-_MOCK_RESULT = {
-    "tx_hash": "MOCK_TX_5xKp_DEMO",
-    "x402_status": "mocked",
+VENDOR_URLS: dict[str, str] = {
+    "OpenWeather": "/premium",
+    "PremiumData": "/premium",
 }
 
 
@@ -28,7 +28,7 @@ def _build_client():
 
 
 def _parse_tx_hash(response) -> str:
-    raw = response.headers.get("x-payment-response", "")
+    raw = response.headers.get("Payment-Response", "") or response.headers.get("x-payment-response", "")
     if not raw:
         return ""
     try:
@@ -41,11 +41,15 @@ def _parse_tx_hash(response) -> str:
 def pay(vendor_id: str, amount: float) -> dict:
     """
     Execute an x402 payment for an approved mandate request.
-    Returns {"tx_hash": str, "x402_status": "executed" | "mocked"}.
+    Returns {"tx_hash": str, "x402_status": "executed" | "mocked", "vendor_url": str}.
     Falls back to mock on any failure so the badge -> partial.
     """
+    path = VENDOR_URLS.get(vendor_id, "/premium")
+    vendor_url = f"{_VENDOR_URL}{path}"
+    mock_result = {"tx_hash": "MOCK_TX_5xKp_DEMO", "x402_status": "mocked", "vendor_url": vendor_url}
+
     if not _PRIVATE_KEY:
-        return _MOCK_RESULT
+        return mock_result
 
     try:
         from x402.http.clients.requests import x402_requests
@@ -53,15 +57,15 @@ def pay(vendor_id: str, amount: float) -> dict:
         client = _build_client()
         session = x402_requests(client)
 
-        # The TS demo server (npm run coinbase:server) acts as the vendor API.
-        response = session.get(f"{_VENDOR_URL}/premium", timeout=15)
+        response = session.get(vendor_url, timeout=15)
         response.raise_for_status()
 
         tx_hash = _parse_tx_hash(response)
         return {
             "tx_hash": tx_hash or "TX_HASH_MISSING",
             "x402_status": "executed",
+            "vendor_url": vendor_url,
         }
 
     except Exception:
-        return _MOCK_RESULT
+        return mock_result

@@ -189,8 +189,14 @@ def update_spent(mandate_id: str, amount: float) -> None:
         print("UPDATE_SPENT SKIPPED: mandate not found in memory")
 
 
+def set_status(mandate_id: str, status: str) -> None:
+    """Update mandate status in memory (e.g. 'active' -> 'revoked')."""
+    if mandate_id in _store:
+        _store[mandate_id]["status"] = status
+
+
 def reset(mandate_id: Optional[str] = None) -> None:
-    """Reset spent_today to 0. Resets all mandates if mandate_id is None."""
+    """Reset spent_today to 0 and status to active."""
     print("RESET CALLED:", mandate_id)
 
     targets = list(_store.keys()) if mandate_id is None else [mandate_id]
@@ -198,6 +204,5 @@ def reset(mandate_id: Optional[str] = None) -> None:
     for mid in targets:
         if mid in _store:
             _store[mid]["spent_today"] = 0.0
-            print("RESET SPENT TODAY:", mid)
-        else:
-            print("RESET SKIPPED: mandate not found:", mid)
+            _store[mid]["status"] = "active"
+            print("RESET:", mid)
