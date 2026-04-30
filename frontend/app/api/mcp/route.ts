@@ -5,7 +5,7 @@ function getSupabase() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 }
 
-function getToken() { return process.env.MCP_BEARER_getToken()! }
+function getToken() { return process.env.MCP_BEARER_TOKEN! }
 
 function authError() {
   return NextResponse.json(
